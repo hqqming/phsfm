@@ -46,7 +46,7 @@
             <el-button type="primary" @click="dialogForm = true" class="login-btn">注册</el-button>
           </el-form-item>
         </el-form>
-        <el-dialog title="用户注册" :visible.sync="dialogForm" style="margin-top: 0;">
+        <el-dialog title="用户注册" center :visible.sync="dialogForm" top="1%" width="624px">
           <el-form :model="regform" :rules="rerules" ref="regform">
             <el-form-item label="头像" :label-width="formLabelWidth" prop="avatar">
               <el-upload
@@ -96,7 +96,11 @@
                 </el-col>
                 <el-col :span="7" :offset="1">
                   <div class="grid-content bg-purple-light">
-                    <el-button @click.prevent="getPhoneCode" class="send"  :disabled='delayTime!==0'>获取用户验证码{{delayTime==0?'':"("+delayTime+"s)"}}</el-button>
+                    <el-button
+                      @click.prevent="getPhoneCode"
+                      class="send"
+                      :disabled="delayTime!==0"
+                    >获取用户验证码{{delayTime==0?'':"("+delayTime+")"}}</el-button>
                   </div>
                 </el-col>
               </el-row>
@@ -115,7 +119,7 @@
 
 <script>
 import axios from "axios";
-
+import { login } from "../../api/login";
 export default {
   data() {
     let validatePhone = (rule, value, callback) => {
@@ -143,8 +147,8 @@ export default {
       }
     };
     return {
-      imgUrl:"",
-      delayTime:0,
+      imgUrl: "",
+      delayTime: 0,
       dialogForm: false,
       formLabelWidth: "60px",
       codeurl: process.env.VUE_APP_BASEURL + "/captcha?type=login",
@@ -218,7 +222,25 @@ export default {
             this.$message.warning("请阅读并勾选用户协议");
             return;
           }
-          this.login();
+          login({
+            phone: this.form.phone,
+            password: this.form.password,
+            code: this.form.code
+          }).then(
+            res => {
+              //成功回调
+              window.console.log(res);
+              if (res.data.code == 200) {
+                this.$message.success("登录成功");
+              } else if (res.data.code == 202) {
+                this.$message.warning(res.data.message);
+              }
+            },
+            err => {
+              //失败回调
+              window.console.log(err);
+            }
+          );
         } else {
           this.$message.error("格式不对哦，检查一下呗！");
           return false;
@@ -230,7 +252,8 @@ export default {
     },
     handleAvatarSuccess(res, file) {
       this.imgUrl = URL.createObjectURL(file.raw);
-      this.regform.avatar = res.data.file_path
+      window.console.log(res);
+      this.regform.avatar = res.data.file_path;
     },
     beforeAvatarUpload(file) {
       const isJPG = file.type === "image/jpeg";
@@ -254,22 +277,16 @@ export default {
         }
       });
     },
-    getPhoneCode(){
-       const reg = /^(0|86|17951)?(13[0-9]|15[012356789]|17[678]|18[0-9]|14[57])[0-9]{8}$/;
-        if (!reg.test(this.regform.phone)) {
-          this.$message.error("请输入正确的手机号");
-          return
-        }
-        if(this.delayTime==0){
-          this.delayTime=60
-          let timeid=setInterval(() => {
-            this.delayTime--
-            if (this.delayTime==0){
-              clearInterval(timeid)
-            }
-          }, 1000);
-        }
-      this.sendsms()
+    getPhoneCode() {
+      if (this.regform.code.length != 4) {
+        return this.$message.warning("验证码错误,请检查");
+      }
+      const reg = /^(0|86|17951)?(13[0-9]|15[012356789]|17[678]|18[0-9]|14[57])[0-9]{8}$/;
+      if (!reg.test(this.regform.phone)) {
+        this.$message.error("请输入正确的手机号");
+        return;
+      }
+      this.sendsms();
     },
     sendsms() {
       axios({
@@ -284,7 +301,21 @@ export default {
         res => {
           //成功回调
           window.console.log(res);
-           this.$message.info("短信验证码是:" + res.data.data.captcha);
+          if (res.data.code == 200) {
+            this.$message.info("短信验证码是:" + res.data.data.captcha);
+            if (this.delayTime == 0) {
+              this.delayTime = 60;
+              let timeid = setInterval(() => {
+                this.delayTime--;
+                if (this.delayTime == 0) {
+                  clearInterval(timeid);
+                }
+              }, 1000);
+            }
+          } else {
+            this.$message.info(res.data.message);
+            return;
+          }
           // this.regform.rcode=res.data.data.captcha
         },
         err => {
@@ -292,61 +323,36 @@ export default {
           window.console.log(err);
         }
       );
-    },
-    login() {
-      axios({
-        url: process.env.VUE_APP_BASEURL + "/login",
-        method: "post",
-        withCredentials: true, //跨域携带cookie
-        data: {
-          phone: this.form.phone,
-          password: this.form.password,
-          code: this.form.code
-        }
-      }).then(
-        res => {
-          //成功回调
-          window.console.log(res);
-          if (res.data.code == 200) {
-            this.$message.success("登录成功");
-          } else if (res.data.code == 202) {
-            this.$message.warning(res.data.message);
-          }
-        },
-        err => {
-          //失败回调
-          window.console.log(err);
-        }
-      );
-    },
-    register() {
-      axios({
-        url: process.env.VUE_APP_BASEURL + "/register",
-        method: "post",
-        data: {
-          username:this.regform.username ,
-          phone:this.regform.phone ,
-          email:this.regform.email ,
-          avatar:this.regform.avatar,
-          password:this.regform.password ,
-          rcode:this.regform.rcode 
-        }
-      }).then(
-        res => {
-          //成功回调
-          window.console.log(res);
-          if(res.code==200) {
-            this.$message.success('注册成功');
-          }else {
-            this.$message.warning(res.data.message);
-          }
-        },
-        err => {
-          //失败回调
-          window.console.log(err);
-        }
-      );
     }
+  },
+  register() {
+    axios({
+      url: process.env.VUE_APP_BASEURL + "/register",
+      method: "post",
+      withCredentials: true,
+      data: {
+        username: this.regform.username,
+        phone: this.regform.phone,
+        email: this.regform.email,
+        avatar: this.regform.avatar,
+        password: this.regform.password,
+        rcode: this.regform.rcode
+      }
+    }).then(
+      res => {
+        //成功回调
+        window.console.log(res);
+        if (res.data.code == 200) {
+          this.$message.success("注册成功");
+        } else {
+          this.$message.warning(res.data.message);
+        }
+      },
+      err => {
+        //失败回调
+        window.console.log(err);
+      }
+    );
   }
 };
 </script>
@@ -419,26 +425,23 @@ export default {
         cursor: pointer;
       }
     }
-    .el-dialog {
-      width: 624px;
-      margin-top: 1% !important;
-      text-align: center;
-    }
     .el-dialog__header {
       height: 53px;
       background-color: #2891ff;
       box-sizing: border-box;
-      text-align: center;
       span {
         color: #fefefe;
       }
     }
   }
+  .el-dialog--center .el-dialog__body {
+    text-align: center;
+  }
   .el-checkbox__label {
     color: #999;
   }
-  .el-dialog__footer {
-    text-align: center;
+  .el-dialog__headerbtn .el-dialog__close {
+    color: #fefefe;
   }
   .avatar-uploader .el-upload {
     border: 1px dashed #d9d9d9;
@@ -457,7 +460,6 @@ export default {
     width: 178px;
     height: 178px;
     line-height: 178px;
-    text-align: center;
   }
   .avatar {
     width: 178px;
