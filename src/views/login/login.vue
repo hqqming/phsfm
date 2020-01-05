@@ -229,9 +229,11 @@ export default {
           }).then(
             res => {
               //成功回调
-              window.console.log(res);
+              // window.console.log(res);
               if (res.data.code == 200) {
                 this.$message.success("登录成功");
+                this.$router.push('/index')
+                
               } else if (res.data.code == 202) {
                 this.$message.warning(res.data.message);
               }
@@ -343,7 +345,8 @@ export default {
         //成功回调
         window.console.log(res);
         if (res.data.code == 200) {
-          this.$message.success("注册成功");
+          this.$message.success("注册成功,请登录!");
+          this.dialogForm=false;
         } else {
           this.$message.warning(res.data.message);
         }
