@@ -46,7 +46,7 @@
             <el-button type="primary" @click="dialogForm = true" class="login-btn">注册</el-button>
           </el-form-item>
         </el-form>
-        <el-dialog title="用户注册" center :visible.sync="dialogForm" top="1%" width="624px">
+        <el-dialog title="用户注册" center :visible.sync="dialogForm" top="1%" width="624px" :closeOnClickModal="false">
           <el-form :model="regform" :rules="rerules" ref="regform">
             <el-form-item label="头像" :label-width="formLabelWidth" prop="avatar">
               <el-upload
@@ -118,8 +118,8 @@
 </template>
 
 <script>
-import axios from "axios";
-import { login } from "../../api/login";
+import { login,register,sendsms } from "../../api/login";
+import {seToken} from '../../utils/token'
 export default {
   data() {
     let validatePhone = (rule, value, callback) => {
@@ -232,8 +232,9 @@ export default {
               // window.console.log(res);
               if (res.data.code == 200) {
                 this.$message.success("登录成功");
-                this.$router.push('/index')
-                
+                // localStorage.setItem("token", res.data.data.token);
+                seToken(res.data.data.token)
+                this.$router.push("/index");
               } else if (res.data.code == 202) {
                 this.$message.warning(res.data.message);
               }
@@ -272,7 +273,31 @@ export default {
     submitregForm() {
       this.$refs["regform"].validate(valid => {
         if (valid) {
-          this.register();
+          register({
+            username: this.regform.username,
+            phone: this.regform.phone,
+            email: this.regform.email,
+            avatar: this.regform.avatar,
+            password: this.regform.password,
+            rcode: this.regform.rcode
+          }).then(
+            res => {
+              //成功回调
+              window.console.log(res);
+              if (res.data.code == 200) {
+                this.$message.success("注册成功,请登录!");
+                this.dialogForm = false;
+                this.$refs["regform"].resetFields();
+                this.imgUrl='';
+              } else {
+                this.$message.warning(res.data.message);
+              }
+            },
+            err => {
+              //失败回调
+              window.console.log(err);
+            }
+          );
         } else {
           this.$message.error("格式不对哦，检查一下呗！");
           return false;
@@ -288,17 +313,9 @@ export default {
         this.$message.error("请输入正确的手机号");
         return;
       }
-      this.sendsms();
-    },
-    sendsms() {
-      axios({
-        url: process.env.VUE_APP_BASEURL + "/sendsms",
-        method: "post",
-        withCredentials: true,
-        data: {
-          phone: this.regform.phone,
-          code: this.regform.code
-        }
+      sendsms({
+        phone: this.regform.phone,
+        code: this.regform.code
       }).then(
         res => {
           //成功回调
@@ -326,36 +343,6 @@ export default {
         }
       );
     }
-  },
-  register() {
-    axios({
-      url: process.env.VUE_APP_BASEURL + "/register",
-      method: "post",
-      withCredentials: true,
-      data: {
-        username: this.regform.username,
-        phone: this.regform.phone,
-        email: this.regform.email,
-        avatar: this.regform.avatar,
-        password: this.regform.password,
-        rcode: this.regform.rcode
-      }
-    }).then(
-      res => {
-        //成功回调
-        window.console.log(res);
-        if (res.data.code == 200) {
-          this.$message.success("注册成功,请登录!");
-          this.dialogForm=false;
-        } else {
-          this.$message.warning(res.data.message);
-        }
-      },
-      err => {
-        //失败回调
-        window.console.log(err);
-      }
-    );
   }
 };
 </script>
