@@ -25,11 +25,8 @@ const router = new VueRouter({
         {
             path: '/index',
             component: index,
+            redirect:'/index/subject',
             children: [
-                {
-                    path: '/',
-                    component:index,
-                },
                 {
                     path: 'subject',
                     component: subject,

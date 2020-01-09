@@ -57,3 +57,14 @@ i {
 .clearfix {
     *zoom: 1;
 }
+.el-dialog__header {
+    height: 53px;
+    background-color: #2891ff;
+    box-sizing: border-box;
+}
+.el-dialog__header span{
+    color: #fefefe
+}
+.el-dialog__headerbtn .el-dialog__close {
+    color: #fefefe;
+}
